@@ -397,6 +397,11 @@
                                 </div>
 
                                 <div class="form-group" style="margin-bottom: 8px;">
+                                    <label for="node-aliases" style="font-size: 0.75rem;">Kata Kunci Alternatif (Aliases) — Pisahkan dengan koma</label>
+                                    <input type="text" id="node-aliases" class="form-control" placeholder="kopi, espresso, latte" style="width: 100%; padding: 6px; font-size: 0.85rem;">
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 8px;">
                                     <label for="node-type" style="font-size: 0.75rem;">Tipe Menu</label>
                                     <select id="node-type" onchange="toggleNodeFields()" style="width: 100%; padding: 6px; font-size: 0.85rem; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary);">
                                         <option value="category">📁 Kategori (Milik sub-menu)</option>
@@ -417,8 +422,12 @@
                                 </div>
                                 <div id="node-media-field" class="hidden" style="margin-bottom: 8px;">
                                     <label for="node-media" style="font-size: 0.75rem;">Lampiran Berkas Media (Nama File)</label>
-                                    <input type="text" id="node-media" class="form-control" placeholder="brosur.pdf" style="width: 100%; padding: 6px; font-size: 0.85rem;">
-                                    <small style="color: var(--text-secondary); font-size: 0.65rem;">Masukkan nama file yang sudah diupload di tab Memory.</small>
+                                    <div style="display: flex; gap: 6px;">
+                                        <input type="text" id="node-media" class="form-control" placeholder="brosur.pdf" style="flex: 1; padding: 6px; font-size: 0.85rem;">
+                                        <button type="button" class="btn btn-secondary" onclick="document.getElementById('node-media-file').click()" style="padding: 6px 10px; font-size: 0.8rem; min-height: auto;">Pilih File</button>
+                                    </div>
+                                    <input type="file" id="node-media-file" onchange="uploadNodeMediaFile(this)" style="display: none;">
+                                    <small style="color: var(--text-secondary); font-size: 0.65rem;">Masukkan nama file, atau klik tombol untuk mengunggah berkas baru ke folder media.</small>
                                 </div>
                                 <div id="node-status-field" class="hidden" style="margin-bottom: 8px;">
                                     <label for="node-status" style="font-size: 0.75rem;">Status Konten (Stok/Ketersediaan)</label>
@@ -758,6 +767,70 @@
 
 
     <!-- ══════════════════════════════════════════
+         TAB 5 — PEMESANAN (ORDERS)
+    ══════════════════════════════════════════ -->
+    <div id="tab-orders" class="tab-content hidden">
+        <main class="dashboard-grid full-grid">
+            <section class="panel panel-full card">
+                <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h2><i data-lucide="shopping-bag"></i> Manajemen Pemesanan</h2>
+                        <p class="card-subtitle">Daftar pesanan dari pelanggan secara real-time melalui WhatsApp</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary" onclick="loadOrders()" style="display: flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 0.85rem;">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px;"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats summary -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div class="info-item" style="padding: 15px; border-radius: 10px; background: rgba(10, 132, 255, 0.08); border: 1px solid rgba(10, 132, 255, 0.15); display: flex; flex-direction: column;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Total Pesanan</span>
+                        <strong id="order-stat-total" style="font-size: 1.6rem; color: #0a84ff; margin-top: 4px;">0</strong>
+                    </div>
+                    <div class="info-item" style="padding: 15px; border-radius: 10px; background: rgba(255, 214, 10, 0.08); border: 1px solid rgba(255, 214, 10, 0.15); display: flex; flex-direction: column;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Menunggu Konfirmasi</span>
+                        <strong id="order-stat-pending" style="font-size: 1.6rem; color: #ffd60a; margin-top: 4px;">0</strong>
+                    </div>
+                    <div class="info-item" style="padding: 15px; border-radius: 10px; background: rgba(48, 209, 88, 0.08); border: 1px solid rgba(48, 209, 88, 0.15); display: flex; flex-direction: column;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase;">Selesai</span>
+                        <strong id="order-stat-completed" style="font-size: 1.6rem; color: #30d158; margin-top: 4px;">0</strong>
+                    </div>
+                </div>
+
+                <!-- Filter & Table -->
+                <div style="margin-bottom: 12px; display: flex; justify-content: flex-end; gap: 8px;">
+                    <button class="btn btn-secondary order-filter-btn active" onclick="filterOrders('ALL')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">Semua</button>
+                    <button class="btn btn-secondary order-filter-btn" onclick="filterOrders('PENDING')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">Menunggu</button>
+                    <button class="btn btn-secondary order-filter-btn" onclick="filterOrders('SELESAI')" style="padding: 6px 12px; font-size: 0.8rem; border-radius: 6px;">Selesai</button>
+                </div>
+
+                <div class="table-container" style="overflow-x: auto; background: rgba(255, 255, 255, 0.02); border-radius: 10px; border: 1px solid var(--border-color);">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 600px; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid var(--border-color); background: rgba(255, 255, 255, 0.03);">
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; width: 60px;">ID</th>
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; width: 180px;">Pelanggan</th>
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase;">Detail Pesanan</th>
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; width: 140px;">Waktu</th>
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; width: 120px;">Status</th>
+                                <th style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; width: 160px; text-align: right;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body">
+                            <tr>
+                                <td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary);">Memuat data pesanan...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ══════════════════════════════════════════
          TAB 3 — SETTINGS
     ══════════════════════════════════════════ -->
     <div id="tab-settings" class="tab-content hidden">
@@ -1003,6 +1076,10 @@
         <button id="btn-tab-shop" class="ios-tab-btn" onclick="switchTab('shop')">
             <i data-lucide="store"></i>
             <span>Toko</span>
+        </button>
+        <button id="btn-tab-orders" class="ios-tab-btn" onclick="switchTab('orders')">
+            <i data-lucide="shopping-bag"></i>
+            <span>Pemesanan</span>
         </button>
         <button id="btn-tab-settings" class="ios-tab-btn" onclick="switchTab('settings')">
             <i data-lucide="settings-2"></i>

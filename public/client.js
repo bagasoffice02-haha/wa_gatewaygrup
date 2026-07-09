@@ -85,12 +85,14 @@ window.switchTab = function(tabId) {
     const tabSettings = document.getElementById('tab-settings');
     const tabGroups = document.getElementById('tab-groups');
     const tabShop = document.getElementById('tab-shop');
+    const tabOrders = document.getElementById('tab-orders');
     
     const btnMonitor = document.getElementById('btn-tab-monitor');
     const btnMemory = document.getElementById('btn-tab-memory');
     const btnSettings = document.getElementById('btn-tab-settings');
     const btnGroups = document.getElementById('btn-tab-groups');
     const btnShop = document.getElementById('btn-tab-shop');
+    const btnOrders = document.getElementById('btn-tab-orders');
     
     // Hide all
     if (tabMonitor) tabMonitor.classList.add('hidden');
@@ -98,12 +100,14 @@ window.switchTab = function(tabId) {
     if (tabSettings) tabSettings.classList.add('hidden');
     if (tabGroups) tabGroups.classList.add('hidden');
     if (tabShop) tabShop.classList.add('hidden');
+    if (tabOrders) tabOrders.classList.add('hidden');
     
     if (btnMonitor) btnMonitor.classList.remove('active');
     if (btnMemory) btnMemory.classList.remove('active');
     if (btnSettings) btnSettings.classList.remove('active');
     if (btnGroups) btnGroups.classList.remove('active');
     if (btnShop) btnShop.classList.remove('active');
+    if (btnOrders) btnOrders.classList.remove('active');
     
     if (tabId === 'monitor') {
         if (tabMonitor) tabMonitor.classList.remove('hidden');
@@ -123,6 +127,10 @@ window.switchTab = function(tabId) {
         if (btnShop) btnShop.classList.add('active');
         loadHostAdmins();
         loadCustomersList();
+    } else if (tabId === 'orders') {
+        if (tabOrders) tabOrders.classList.remove('hidden');
+        if (btnOrders) btnOrders.classList.add('active');
+        loadOrders();
     }
 };// Real-time Socket.io Connection Events
 socket.on('connect', () => {
@@ -1059,6 +1067,7 @@ window.selectTreeNode = function(nodeId) {
     
     // Update data form
     document.getElementById('node-name').value = node.name;
+    document.getElementById('node-aliases').value = Array.isArray(node.aliases) ? node.aliases.join(', ') : '';
     document.getElementById('node-type').value = node.type;
     
     // Tipe toggle fields
@@ -1180,6 +1189,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (node && node.type === 'content') {
                 node.status = e.target.value;
                 renderMenuTreeVisual();
+            }
+        });
+    }
+    
+    const inputAliases = document.getElementById('node-aliases');
+    if (inputAliases) {
+        inputAliases.addEventListener('input', (e) => {
+            if (!selectedGroupId || !selectedNodeId) return;
+            const node = findNodeInTree(selectedGroupConfig.menuTree, selectedNodeId);
+            if (node) {
+                node.aliases = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
             }
         });
     }
@@ -1743,13 +1763,17 @@ window.loadCustomersList = async function() {
                         <button class="btn btn-primary" onclick="saveCustomerInfo(${idx})" style="font-size: 0.75rem; padding: 4px 8px;">Simpan</button>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: center;">
+                <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
                     <div style="flex: 1;">
-                        <label style="font-size: 0.7rem; color: var(--text-secondary);">Catatan / Alamat / Detail Pesanan</label>
+                        <label style="font-size: 0.7rem; color: var(--text-secondary);">Catatan / Alamat</label>
                         <input type="text" id="cust-notes-${idx}" value="${cust.notes || ''}" placeholder="Tulis catatan di sini..." class="form-control" style="width: 100%; padding: 4px 8px; font-size: 0.8rem; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
                     </div>
-                    <div style="width: 100px;">
-                        <label style="font-size: 0.7rem; color: var(--text-secondary);">Jumlah Order</label>
+                    <div style="flex: 1;">
+                        <label style="font-size: 0.7rem; color: var(--text-secondary);">Label / Tag (koma pemisah)</label>
+                        <input type="text" id="cust-labels-${idx}" value="${(cust.labels || []).join(', ')}" placeholder="VIP, Reseller" class="form-control" style="width: 100%; padding: 4px 8px; font-size: 0.8rem; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                    </div>
+                    <div style="width: 80px;">
+                        <label style="font-size: 0.7rem; color: var(--text-secondary);">Order Count</label>
                         <input type="number" id="cust-order-${idx}" value="${cust.orderCount || 0}" class="form-control" style="width: 100%; padding: 4px 8px; font-size: 0.8rem; text-align: center; background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
                     </div>
                 </div>
@@ -1769,10 +1793,12 @@ window.saveCustomerInfo = async function(idx) {
     
     const newName = document.getElementById(`cust-name-${idx}`).value.trim();
     const newNotes = document.getElementById(`cust-notes-${idx}`).value.trim();
+    const newLabels = document.getElementById(`cust-labels-${idx}`).value.split(',').map(s => s.trim()).filter(Boolean);
     const newOrderCount = parseInt(document.getElementById(`cust-order-${idx}`).value, 10) || 0;
     
     cust.name = newName;
     cust.notes = newNotes;
+    cust.labels = newLabels;
     cust.orderCount = newOrderCount;
     
     try {
@@ -2462,3 +2488,248 @@ window.logoutAdmin = async function() {
         alert('Gagal menghubungi server untuk logout.');
     }
 };
+
+// Node Editor: Direct Media File Uploader
+window.uploadNodeMediaFile = async function(input) {
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    try {
+        const res = await fetch('/api/upload/media', {
+            method: 'POST',
+            body: formData
+        });
+        if (res.ok) {
+            const filename = file.name;
+            document.getElementById('node-media').value = filename;
+            // update in-memory node
+            if (selectedGroupId && selectedNodeId) {
+                const node = findNodeInTree(selectedGroupConfig.menuTree, selectedNodeId);
+                if (node && node.type === 'content') {
+                    node.media = filename;
+                }
+            }
+            alert(`File "${filename}" berhasil diunggah!`);
+        } else {
+            alert('Gagal unggah file: ' + res.statusText);
+        }
+    } catch (err) {
+        console.error('Error uploadNodeMediaFile:', err);
+        alert('Gagal mengunggah berkas ke server.');
+    }
+};
+
+// === ORDERS MANAGEMENT (REAL-TIME ORDER TAB) ===
+let allOrders = [];
+let currentOrderFilter = 'ALL';
+
+// Inject keyframe animations for toast notification
+const animStyle = document.createElement('style');
+animStyle.textContent = `
+@keyframes slideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+`;
+document.head.appendChild(animStyle);
+
+function playNotificationSound() {
+    try {
+        const context = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Ding
+        const osc1 = context.createOscillator();
+        const gain1 = context.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, context.currentTime);
+        gain1.gain.setValueAtTime(0.2, context.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.4);
+        osc1.connect(gain1);
+        gain1.connect(context.destination);
+        osc1.start();
+        osc1.stop(context.currentTime + 0.4);
+        
+        // Dong
+        const osc2 = context.createOscillator();
+        const gain2 = context.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1046.5, context.currentTime + 0.12);
+        gain2.gain.setValueAtTime(0.2, context.currentTime + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.01, context.currentTime + 0.6);
+        osc2.connect(gain2);
+        gain2.connect(context.destination);
+        osc2.start(context.currentTime + 0.12);
+        osc2.stop(context.currentTime + 0.6);
+    } catch (e) {
+        console.warn('AudioContext not allowed yet:', e.message);
+    }
+}
+
+window.loadOrders = async function() {
+    try {
+        const res = await fetch('/api/orders');
+        if (!res.ok) throw new Error('Gagal mengambil data pesanan');
+        allOrders = await res.json();
+        
+        const total = allOrders.length;
+        const pending = allOrders.filter(o => o.status === 'PENDING').length;
+        const completed = allOrders.filter(o => o.status === 'SELESAI').length;
+        
+        document.getElementById('order-stat-total').textContent = total;
+        document.getElementById('order-stat-pending').textContent = pending;
+        document.getElementById('order-stat-completed').textContent = completed;
+        
+        // Remove red dot badge if we are viewing the orders tab
+        const dot = document.getElementById('order-badge-dot');
+        if (dot) dot.remove();
+        
+        renderOrdersTable();
+    } catch (err) {
+        console.error('Error loadOrders:', err);
+    }
+};
+
+window.filterOrders = function(status) {
+    currentOrderFilter = status;
+    const buttons = document.querySelectorAll('.order-filter-btn');
+    buttons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(status)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderOrdersTable();
+};
+
+window.renderOrdersTable = function() {
+    const tbody = document.getElementById('orders-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const filtered = allOrders.filter(o => {
+        if (currentOrderFilter === 'ALL') return true;
+        return o.status === currentOrderFilter;
+    });
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary);">Tidak ada pesanan dengan status "${currentOrderFilter}"</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    filtered.forEach(order => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border-color)';
+        
+        const dateFormatted = new Date(order.created_at).toLocaleString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: 'short'
+        });
+        
+        const statusBadge = order.status === 'PENDING' 
+            ? `<span class="badge" style="background: rgba(255,214,10,0.15); color: #ffd60a; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Menunggu</span>`
+            : order.status === 'SELESAI'
+                ? `<span class="badge" style="background: rgba(48,209,88,0.15); color: #30d158; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Selesai</span>`
+                : `<span class="badge" style="background: rgba(255,69,58,0.15); color: #ff453a; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Batal</span>`;
+                
+        tr.innerHTML = `
+            <td style="padding: 12px 16px; font-weight: 500; font-family: monospace;">#${order.id}</td>
+            <td style="padding: 12px 16px;">
+                <div style="font-weight: 600;">${order.customer_name}</div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    <a href="https://wa.me/${order.customer_number}" target="_blank" style="color: #30d158; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; gap: 2px;">
+                        <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> ${order.customer_number}
+                    </a>
+                </div>
+            </td>
+            <td style="padding: 12px 16px; font-size: 0.9rem; white-space: pre-wrap;">${order.details}</td>
+            <td style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary);">${dateFormatted}</td>
+            <td style="padding: 12px 16px;">${statusBadge}</td>
+            <td style="padding: 12px 16px; text-align: right;">
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                    ${order.status === 'PENDING' ? `
+                        <button class="btn btn-primary" onclick="updateOrderStatus(${order.id}, 'SELESAI')" style="font-size: 0.75rem; padding: 4px 8px; background: #30d158; border-color: #30d158;">Selesai</button>
+                        <button class="btn btn-secondary" onclick="updateOrderStatus(${order.id}, 'BATAL')" style="font-size: 0.75rem; padding: 4px 8px; color: #ff453a; border-color: rgba(255,69,58,0.3);">Batal</button>
+                    ` : ''}
+                    <button class="btn btn-secondary" onclick="deleteOrder(${order.id})" style="font-size: 0.75rem; padding: 4px 8px; color: #ff453a; border-color: rgba(255,69,58,0.2);">Hapus</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    if (window.lucide) lucide.createIcons();
+};
+
+window.updateOrderStatus = async function(id, status) {
+    try {
+        const res = await fetch(`/api/orders/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) {
+            loadOrders();
+        } else {
+            alert('Gagal memperbarui status pesanan');
+        }
+    } catch (err) {
+        console.error('Error updateOrderStatus:', err);
+    }
+};
+
+window.deleteOrder = async function(id) {
+    if (!confirm('Hapus pesanan ini dari riwayat?')) return;
+    try {
+        const res = await fetch(`/api/orders/${id}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            loadOrders();
+        } else {
+            alert('Gagal menghapus pesanan');
+        }
+    } catch (err) {
+        console.error('Error deleteOrder:', err);
+    }
+};
+
+// WebSocket Order Listener
+socket.on('order_created', (newOrder) => {
+    playNotificationSound();
+    
+    const toast = document.createElement('div');
+    toast.style = 'position: fixed; top: 20px; right: 20px; background: #0a84ff; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.9rem; animation: slideIn 0.3s ease;';
+    toast.innerHTML = `<i data-lucide="shopping-bag" style="width: 18px; height: 18px;"></i> <span>Pesanan Baru Masuk! #${newOrder.id}</span>`;
+    document.body.appendChild(toast);
+    
+    if (window.lucide) lucide.createIcons();
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+
+    const activeTab = document.querySelector('.ios-tab-btn.active');
+    if (activeTab && activeTab.id === 'btn-tab-orders') {
+        loadOrders();
+    } else {
+        const btnOrders = document.getElementById('btn-tab-orders');
+        if (btnOrders) {
+            btnOrders.style.position = 'relative';
+            let dot = document.getElementById('order-badge-dot');
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.id = 'order-badge-dot';
+                dot.style = 'position: absolute; top: 6px; right: 28px; width: 8px; height: 8px; background: #ff453a; border-radius: 50%;';
+                btnOrders.appendChild(dot);
+            }
+        }
+    }
+});

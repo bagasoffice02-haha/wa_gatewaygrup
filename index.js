@@ -89,6 +89,18 @@ async function initDatabase() {
         `);
         console.log('[DB] Tabel key_value_store di SQLite siap.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_number TEXT,
+                customer_name TEXT,
+                details TEXT,
+                status TEXT DEFAULT 'PENDING',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('[DB] Tabel orders di SQLite siap.');
+
         // Muat data dari SQLite
         const rows = await db.all('SELECT key, value FROM key_value_store');
         const store = {};
@@ -419,6 +431,66 @@ app.post('/api/logout', (req, res) => {
 
 app.get('/api/auth-status', (req, res) => {
     res.json({ authenticated: true });
+});
+
+// Endpoint Pemesanan (Orders)
+app.get('/api/orders', async (req, res) => {
+    try {
+        if (!db) return res.json([]);
+        const rows = await db.all('SELECT * FROM orders ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        console.error('Gagal mengambil orders:', err.message);
+        res.status(500).json({ error: 'Gagal mengambil data pesanan' });
+    }
+});
+
+app.post('/api/orders/:id/status', async (req, res) => {
+    try {
+        if (!db) return res.status(500).json({ error: 'Database belum siap' });
+        const { id } = req.params;
+        const { status } = req.body;
+        await db.run('UPDATE orders SET status = ? WHERE id = ?', status, id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Gagal update status order:', err.message);
+        res.status(500).json({ error: 'Gagal update status pesanan' });
+    }
+});
+
+app.delete('/api/orders/:id', async (req, res) => {
+    try {
+        if (!db) return res.status(500).json({ error: 'Database belum siap' });
+        const { id } = req.params;
+        await db.run('DELETE FROM orders WHERE id = ?', id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Gagal menghapus order:', err.message);
+        res.status(500).json({ error: 'Gagal menghapus pesanan' });
+    }
+});
+
+// Endpoint CRM Pelanggan (Notes & Labels)
+app.post('/api/customers/update-crm', async (req, res) => {
+    try {
+        const { customer_number, notes, labels } = req.body;
+        if (!customer_number) return res.status(400).json({ error: 'Nomor pelanggan wajib diisi' });
+        
+        if (!shopData.customers) shopData.customers = [];
+        let cust = shopData.customers.find(c => c.number === customer_number);
+        if (!cust) {
+            cust = { number: customer_number, name: '', interaction_count: 0 };
+            shopData.customers.push(cust);
+        }
+        cust.notes = notes || '';
+        cust.labels = Array.isArray(labels) ? labels : (labels ? labels.split(',').map(s => s.trim()).filter(Boolean) : []);
+        
+        await saveDatabase();
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Gagal update CRM customer:', err.message);
+        res.status(500).json({ error: 'Gagal update data CRM' });
+    }
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -2751,11 +2823,22 @@ function findNodeById(node, id) {
     return null;
 }
 
-// Helper: Cari node berdasarkan nama (case-insensitive) dan kembalikan node beserta daftar ID parent-nya
+// Helper: Cari node berdasarkan nama (case-insensitive) atau alias, dan kembalikan node beserta daftar ID parent-nya
 function findNodeByName(node, name, parentPath = []) {
-    if (node && node.name && node.name.toLowerCase().trim() === name.toLowerCase().trim()) {
+    const searchName = name.toLowerCase().trim();
+    const nodeName = node && node.name ? node.name.toLowerCase().trim() : '';
+    
+    if (nodeName === searchName) {
         return { node, parentPath };
     }
+    
+    if (node && Array.isArray(node.aliases)) {
+        const hasAlias = node.aliases.some(a => a.toLowerCase().trim() === searchName);
+        if (hasAlias) {
+            return { node, parentPath };
+        }
+    }
+    
     if (node && node.children && Array.isArray(node.children)) {
         for (const child of node.children) {
             const path = [...parentPath, node.id];
@@ -2961,6 +3044,74 @@ async function handleIncomingMessage(msg) {
 
     const adminSession = global.adminMenuStates.get(senderId);
     const textLower = userMessage.toLowerCase().trim();
+
+    // MEKANISME AUTO-ORDER DETECTOR
+    const isOrderMsg = textLower.startsWith('pesan:') || 
+                       textLower.startsWith('pesan ') || 
+                       textLower.startsWith('beli:') || 
+                       textLower.startsWith('beli ');
+                       
+    if (isOrderMsg) {
+        let details = '';
+        if (textLower.startsWith('pesan:')) details = userMessage.substring(6).trim();
+        else if (textLower.startsWith('pesan ')) details = userMessage.substring(6).trim();
+        else if (textLower.startsWith('beli:')) details = userMessage.substring(5).trim();
+        else if (textLower.startsWith('beli ')) details = userMessage.substring(5).trim();
+        
+        if (details.length > 0) {
+            let contactName = '';
+            try {
+                const contact = await msg.getContact();
+                contactName = contact.pushname || contact.name || '';
+            } catch (e) {}
+            
+            let groupName = '';
+            if (isGroup) {
+                try {
+                    const chat = await client.getChatById(chatId);
+                    groupName = chat.name || '';
+                } catch(e) {}
+            }
+            
+            const customerNumber = senderId.split('@')[0];
+            let displayName = contactName || customerNumber;
+            if (groupName) {
+                displayName += ` (${groupName})`;
+            }
+            
+            if (db) {
+                try {
+                    await db.run(
+                        'INSERT INTO orders (customer_number, customer_name, details, status) VALUES (?, ?, ?, ?)',
+                        customerNumber,
+                        displayName,
+                        details,
+                        'PENDING'
+                    );
+                    
+                    const orderResult = await db.get('SELECT last_insert_rowid() as id');
+                    const orderId = orderResult ? orderResult.id : Date.now();
+                    
+                    io.emit('order_created', {
+                        id: orderId,
+                        customer_number: customerNumber,
+                        customer_name: displayName,
+                        details: details,
+                        status: 'PENDING',
+                        created_at: new Date().toISOString()
+                    });
+                    
+                    await msg.reply(`✅ *Pesanan Anda Telah Dicatat!*\n\n` +
+                                    `📦 *Detail:* ${details}\n` +
+                                    `👤 *Nama:* ${contactName || customerNumber}\n\n` +
+                                    `Terima kasih! Admin kami akan segera menghubungi Bos untuk konfirmasi pembayaran.`);
+                    return;
+                } catch (err) {
+                    console.error('Gagal mencatat order ke SQLite:', err.message);
+                }
+            }
+        }
+    }
 
     // Cek Pemicu Menu Admin Utama (Hanya di Chat Pribadi)
     if (!isGroup && isSenderHostAdmin && (textLower === '!admin' || textLower === 'admin' || textLower === 'menu admin' || textLower === 'menu' || textLower === 'bantuan' || textLower === 'help')) {
@@ -4165,7 +4316,9 @@ async function handleIncomingMessage(msg) {
             
             // Coba urai angka pilihan (hanya jika navigasi angka aktif)
             if (cfg.enableNumberNavigation !== false) {
-                const choiceIndex = parseInt(text, 10) - 1;
+                const numberMatch = text.match(/\b\d+\b/);
+                const parsedNum = numberMatch ? numberMatch[0] : text;
+                const choiceIndex = parseInt(parsedNum, 10) - 1;
                 const currentNode = findNodeById(cfg.menuTree, session.currentNodeId) || cfg.menuTree;
                 
                 if (currentNode && currentNode.children) {
@@ -4208,7 +4361,44 @@ async function handleIncomingMessage(msg) {
                         }
                         return;
                     } else {
-                        if (/^\d+$/.test(text)) {
+                        // Coba cocokkan nama/alias anak menu secara langsung
+                        const matchedChild = sortedChildren.find(c => {
+                            const cName = c.name ? c.name.toLowerCase().trim() : '';
+                            const cAliases = Array.isArray(c.aliases) ? c.aliases : [];
+                            return cName === text || cAliases.some(a => a.toLowerCase().trim() === text);
+                        });
+
+                        if (matchedChild) {
+                            if (matchedChild.type === 'category') {
+                                session.parentIds.push(session.currentNodeId);
+                                session.currentNodeId = matchedChild.id;
+                                const replyMsg = renderGroupMenuMessage(matchedChild, cfg);
+                                await msg.reply(replyMsg);
+                            } else {
+                                const conEmoji = matchedChild.isPromo ? '🔥' : (cfg.contentEmoji || '📄');
+                                const statusSuffix = getStatusEmoji(matchedChild.status);
+                                const promoHeader = matchedChild.isPromo ? `⚠️ *PROMO SPESIAL HARI INI!* ⚠️\n\n` : '';
+                                let replyText = `${conEmoji} *${matchedChild.name}*${statusSuffix}\n\n${promoHeader}${matchedChild.text}`;
+                                const footerText = cfg.contentFooter || `_Ketik *0* untuk kembali ke menu sebelumnya, atau *#* untuk kembali ke menu utama._`;
+                                replyText += `\n\n${footerText}`;
+                                
+                                await msg.reply(replyText);
+                                
+                                if (matchedChild.media && matchedChild.media.trim() !== '') {
+                                    const mediaPath = path.join('./media', matchedChild.media.trim());
+                                    if (fs.existsSync(mediaPath)) {
+                                        const fileData = fs.readFileSync(mediaPath);
+                                        const base64Data = fileData.toString('base64');
+                                        const mimeType = getMimeType(mediaPath);
+                                        const mediaObj = new MessageMedia(mimeType, base64Data, path.basename(mediaPath));
+                                        await client.sendMessage(groupId, mediaObj, { quotedMessageId: msg.id._serialized });
+                                    }
+                                }
+                            }
+                            return;
+                        }
+
+                        if (/^\d+$/.test(parsedNum)) {
                             await msg.reply(`⚠️ Pilihan tidak valid. Silakan ketik angka (1-${sortedChildren.length}), ketik *0* untuk kembali, atau *#* untuk ke menu utama.`);
                             return;
                         }
