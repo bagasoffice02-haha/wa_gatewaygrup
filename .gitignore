@@ -10,4 +10,6 @@ scratch/
 .env
 *.log
 *.bak
+*.sqlite
+
 

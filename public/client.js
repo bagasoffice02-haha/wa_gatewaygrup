@@ -2446,3 +2446,19 @@ async function qeDeleteProduct(nodeId, productName) {
     await saveGroupConfiguration();
     renderQuickEditList();
 }
+
+window.logoutAdmin = async function() {
+    if (!confirm('Apakah Anda yakin ingin keluar dari dasbor?')) return;
+    try {
+        const res = await fetch('/api/logout', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = '/login';
+        } else {
+            alert('Gagal logout: ' + (data.error || 'Terjadi kesalahan'));
+        }
+    } catch (err) {
+        console.error('Error logging out:', err);
+        alert('Gagal menghubungi server untuk logout.');
+    }
+};

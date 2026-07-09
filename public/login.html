@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Admin — WA Bot CS</title>
+    <!-- Google Fonts & Lucide Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --bg-gradient: radial-gradient(circle at 50% 50%, #1c1c1e 0%, #0c0c0e 100%);
+            --panel-bg: rgba(28, 28, 30, 0.7);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --primary-color: #0a84ff;
+            --primary-glow: rgba(10, 132, 255, 0.35);
+            --text-primary: #ffffff;
+            --text-secondary: #8e8e93;
+            --error-color: #ff453a;
+            --radius-lg: 16px;
+            --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Background blur circles */
+        .blur-circle {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(100px);
+            z-index: 1;
+            opacity: 0.3;
+        }
+
+        .blur-circle-1 {
+            width: 300px;
+            height: 300px;
+            background: #0a84ff;
+            top: -50px;
+            left: -50px;
+        }
+
+        .blur-circle-2 {
+            width: 400px;
+            height: 400px;
+            background: #5e5ce6;
+            bottom: -100px;
+            right: -100px;
+        }
+
+        /* Glassmorphism Card */
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            padding: 40px 30px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 100px rgba(10, 132, 255, 0.05);
+            z-index: 10;
+            text-align: center;
+            animation: cardFadeIn 0.6s ease-out;
+        }
+
+        @keyframes cardFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .logo-wrapper {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #0a84ff 0%, #5e5ce6 100%);
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px var(--primary-glow);
+            animation: logoPulse 2s infinite ease-in-out;
+        }
+
+        @keyframes logoPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+        }
+
+        .logo-wrapper i {
+            color: #ffffff;
+            width: 34px;
+            height: 34px;
+        }
+
+        h2 {
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 6px;
+            letter-spacing: -0.5px;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            text-align: left;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: var(--text-secondary);
+            width: 18px;
+            height: 18px;
+            transition: var(--transition-smooth);
+        }
+
+        .form-control {
+            width: 100%;
+            height: 48px;
+            padding: 12px 16px 12px 44px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 0.95rem;
+            transition: var(--transition-smooth);
+        }
+
+        .form-control:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 12px var(--primary-glow);
+        }
+
+        .form-control:focus + i {
+            color: var(--primary-color);
+        }
+
+        .btn-submit {
+            width: 100%;
+            height: 48px;
+            background: linear-gradient(135deg, #0a84ff 0%, #0056b3 100%);
+            border: none;
+            border-radius: 10px;
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 86, 179, 0.4);
+            transition: var(--transition-smooth);
+            margin-top: 10px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 86, 179, 0.6);
+            background: linear-gradient(135deg, #3399ff 0%, #0066cc 100%);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .error-banner {
+            background: rgba(255, 69, 58, 0.15);
+            border: 1px solid rgba(255, 69, 58, 0.25);
+            color: var(--error-color);
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            text-align: left;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        /* Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+            .login-card {
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="blur-circle blur-circle-1"></div>
+    <div class="blur-circle blur-circle-2"></div>
+
+    <div class="login-card">
+        <div class="logo-wrapper">
+            <i data-lucide="shield-check"></i>
+        </div>
+        
+        <h2>Dasbor WA Bot CS</h2>
+        <p class="subtitle">Silakan masuk menggunakan kredensial admin Anda</p>
+        
+        <div id="error-box" class="error-banner">
+            <i data-lucide="alert-circle" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+            <span id="error-message">Username atau password salah!</span>
+        </div>
+
+        <form id="login-form" onsubmit="handleLogin(event)">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div class="input-wrapper">
+                    <input type="text" id="username" class="form-control" placeholder="Masukkan username" required autocomplete="username">
+                    <i data-lucide="user"></i>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" class="form-control" placeholder="Masukkan password" required autocomplete="current-password">
+                    <i data-lucide="lock"></i>
+                </div>
+            </div>
+
+            <button type="submit" id="btn-login" class="btn-submit">
+                <span>Masuk Ke Dasbor</span>
+                <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const usernameInput = document.getElementById('username');
+            const passwordInput = document.getElementById('password');
+            const errorBox = document.getElementById('error-box');
+            const errorMessage = document.getElementById('error-message');
+            const btnLogin = document.getElementById('btn-login');
+            
+            // Set loading state
+            btnLogin.disabled = true;
+            btnLogin.innerHTML = `<span>Memproses...</span>`;
+            errorBox.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: usernameInput.value,
+                        password: passwordInput.value
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    // Redirect to dashboard on success
+                    window.location.href = '/';
+                } else {
+                    // Show error banner
+                    errorMessage.textContent = data.error || 'Gagal login. Hubungi administrator.';
+                    errorBox.style.display = 'flex';
+                    // Reset button state
+                    btnLogin.disabled = false;
+                    btnLogin.innerHTML = `<span>Masuk Ke Dasbor</span><i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>`;
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                errorMessage.textContent = 'Gagal terhubung ke server backend.';
+                errorBox.style.display = 'flex';
+                // Reset button state
+                btnLogin.disabled = false;
+                btnLogin.innerHTML = `<span>Masuk Ke Dasbor</span><i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>`;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>

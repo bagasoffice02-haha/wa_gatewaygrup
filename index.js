@@ -18,8 +18,12 @@ const { exec } = require('child_process');
 
 // Definisikan File Penyimpanan Data Persisten
 const CONFIG_FILE = './config.json';
-const DATABASE_FILE = './database.json';
-const SESSION_DB_FILE = './chat_sessions.json'; // kept for some legacy checks if any
+const SQLITE_DB_FILE = './database.sqlite';
+const DATABASE_FILE = './database.json'; // kept for legacy migration
+const SESSION_DB_FILE = './chat_sessions.json'; // kept for legacy migration
+
+const sqlite3 = require('sqlite3');
+const { open } = require('sqlite');
 
 // Pastikan file config ada sebelum memulai aplikasi
 if (!fs.existsSync(CONFIG_FILE)) {
@@ -35,6 +39,22 @@ if (apiEndpoint && !apiEndpoint.includes('/chat/completions') && !apiEndpoint.in
     apiEndpoint = apiEndpoint.replace(/\/+$/, '') + '/v1/chat/completions';
 }
 
+// Credentials Configuration for Admin Dashboard Login
+const ADMIN_USERNAME = config.admin_username || 'admin';
+let ADMIN_PASSWORD = config.admin_password;
+
+if (!ADMIN_PASSWORD) {
+    ADMIN_PASSWORD = Math.random().toString(36).substring(2, 10);
+    console.log(`\n======================================================`);
+    console.log(`[SECURITY] Password Admin tidak diset di config.json.`);
+    console.log(`| Kata sandi acak yang dibuat: ${ADMIN_PASSWORD}`);
+    console.log(`| Silakan simpan kata sandi ini untuk login dasbor!`);
+    console.log(`| Username: ${ADMIN_USERNAME}`);
+    console.log(`======================================================\n`);
+} else {
+    console.log(`\n[SECURITY] Username login dasbor: ${ADMIN_USERNAME}\n`);
+}
+
 // State Management
 let historyLog = { finance: [], agenda: [] };
 let sheetsSummaryCache = { data: null, timestamp: 0 };
@@ -42,7 +62,7 @@ let reminders = [];
 let groupConfigs = { group_configs: {} };
 let shopData = { host_admins: [], customers: [] };
 
-// Central Database Object
+// Central Database Object Cache
 let dbData = {
     chat_sessions: {},
     log_history: { finance: [], agenda: [] },
@@ -51,114 +71,131 @@ let dbData = {
     shop_data: { host_admins: [], customers: [] }
 };
 
-// Fungsi Inisialisasi Database Terpusat dengan Migrasi Data Otomatis
-function initDatabase() {
+let db; // Global SQLite Database Connection Handle
+
+// Fungsi Inisialisasi Database Terpusat SQLite dengan Migrasi Data Otomatis
+async function initDatabase() {
     try {
-        if (fs.existsSync(DATABASE_FILE)) {
-            const raw = fs.readFileSync(DATABASE_FILE, 'utf-8');
-            dbData = JSON.parse(raw);
-            console.log('[DB] Database terpusat database.json berhasil dimuat.');
-            
-            // Map ke variabel cache memory aplikasi
-            if (dbData.log_history) historyLog = dbData.log_history;
-            if (dbData.reminders) reminders = dbData.reminders;
-            if (dbData.group_configs) groupConfigs = dbData.group_configs;
-            if (dbData.shop_data) shopData = dbData.shop_data;
+        db = await open({
+            filename: SQLITE_DB_FILE,
+            driver: sqlite3.Database
+        });
+        
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS key_value_store (
+                key TEXT PRIMARY KEY,
+                value TEXT
+            )
+        `);
+        console.log('[DB] Tabel key_value_store di SQLite siap.');
+
+        // Muat data dari SQLite
+        const rows = await db.all('SELECT key, value FROM key_value_store');
+        const store = {};
+        rows.forEach(r => {
+            try { store[r.key] = JSON.parse(r.value); } catch(e) {}
+        });
+
+        const hasDataInSqlite = rows.length > 0;
+        
+        if (hasDataInSqlite) {
+            console.log('[DB] Muat memory cache dari database SQLite.');
+            dbData = {
+                chat_sessions: store.chat_sessions || {},
+                log_history: store.log_history || { finance: [], agenda: [] },
+                reminders: store.reminders || [],
+                group_configs: store.group_configs || { group_configs: {} },
+                shop_data: store.shop_data || { host_admins: [], customers: [] }
+            };
         } else {
-            console.log('[DB] database.json tidak ditemukan. Memulai proses migrasi data lama...');
+            console.log('[DB] SQLite kosong. Memeriksa database lama untuk migrasi...');
             
-            // Migrasikan file individual jika masih ada
-            if (fs.existsSync('./chat_sessions.json')) {
-                try { dbData.chat_sessions = JSON.parse(fs.readFileSync('./chat_sessions.json', 'utf-8')); } catch(e) {}
-            }
-            if (fs.existsSync('./log_history.json')) {
-                try { dbData.log_history = JSON.parse(fs.readFileSync('./log_history.json', 'utf-8')); } catch(e) {}
-            }
-            if (fs.existsSync('./reminders.json')) {
-                try { dbData.reminders = JSON.parse(fs.readFileSync('./reminders.json', 'utf-8')); } catch(e) {}
-            }
-            if (fs.existsSync('./group_configs.json')) {
-                try { dbData.group_configs = JSON.parse(fs.readFileSync('./group_configs.json', 'utf-8')); } catch(e) {}
-            }
-            if (fs.existsSync('./shop_data.json')) {
-                try { dbData.shop_data = JSON.parse(fs.readFileSync('./shop_data.json', 'utf-8')); } catch(e) {}
-            }
-            
-            // Simpan sebagai database terpusat yang baru
-            fs.writeFileSync(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
-            console.log('[DB] database.json berhasil dibuat dan data lama dimigrasikan.');
-            
-            // Map ke variabel cache memory aplikasi
-            historyLog = dbData.log_history || historyLog;
-            reminders = dbData.reminders || reminders;
-            groupConfigs = dbData.group_configs || groupConfigs;
-            shopData = dbData.shop_data || shopData;
-            
-            // Ubah nama file lama menjadi .bak agar aman dan tidak hilang
-            const oldFiles = ['./chat_sessions.json', './log_history.json', './reminders.json', './group_configs.json', './shop_data.json'];
-            for (const file of oldFiles) {
-                if (fs.existsSync(file)) {
-                    try { fs.renameSync(file, file + '.bak'); } catch(e) {}
+            // Cek file database.json lama
+            if (fs.existsSync(DATABASE_FILE)) {
+                try {
+                    const raw = fs.readFileSync(DATABASE_FILE, 'utf-8');
+                    dbData = JSON.parse(raw);
+                    console.log('[DB] database.json ditemukan. Memigrasikan ke SQLite...');
+                    
+                    const keys = ['chat_sessions', 'log_history', 'reminders', 'group_configs', 'shop_data'];
+                    for (const key of keys) {
+                        const val = dbData[key] || (key === 'chat_sessions' ? {} : key === 'reminders' ? [] : key === 'group_configs' ? { group_configs: {} } : { host_admins: [], customers: [] });
+                        await db.run('INSERT OR REPLACE INTO key_value_store (key, value) VALUES (?, ?)', key, JSON.stringify(val));
+                    }
+                    console.log('[DB] Migrasi data dari database.json ke SQLite berhasil.');
+                    
+                    try { fs.renameSync(DATABASE_FILE, DATABASE_FILE + '.bak'); } catch(e) {}
+                } catch (err) {
+                    console.error('[DB] Gagal memigrasikan database.json lama:', err.message);
+                }
+            } else {
+                console.log('[DB] Tidak ada data lama. Menginisialisasi SQLite dengan objek kosong.');
+                const keys = ['chat_sessions', 'log_history', 'reminders', 'group_configs', 'shop_data'];
+                for (const key of keys) {
+                    const val = key === 'chat_sessions' ? {} : key === 'reminders' ? [] : key === 'group_configs' ? { group_configs: {} } : { host_admins: [], customers: [] };
+                    await db.run('INSERT OR REPLACE INTO key_value_store (key, value) VALUES (?, ?)', key, JSON.stringify(val));
                 }
             }
         }
+        
+        // Sinkronisasi ke variabel memori aplikasi
+        chatSessions = dbData.chat_sessions;
+        historyLog = dbData.log_history;
+        reminders = dbData.reminders;
+        groupConfigs = dbData.group_configs;
+        shopData = dbData.shop_data;
+        
     } catch (err) {
-        console.error('[DB] Gagal menginisialisasi database terpusat:', err.message);
+        console.error('[DB] Error saat inisialisasi SQLite:', err.message);
     }
 }
 
-// Jalankan inisialisasi di awal script untuk menjamin ketersediaan dbData
-initDatabase();
-
-// Fungsi Helper untuk Menyimpan Seluruh Data ke database.json
-function saveDatabase() {
+// Helper untuk Menyimpan Perubahan Data ke SQLite secara Asinkronus di Background
+async function saveDatabase() {
     try {
+        if (!db) return;
         dbData.log_history = historyLog;
         dbData.reminders = reminders;
         dbData.group_configs = groupConfigs;
         dbData.shop_data = shopData;
-        fs.writeFileSync(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+        
+        const keys = ['log_history', 'reminders', 'group_configs', 'shop_data'];
+        for (const key of keys) {
+            await db.run('INSERT OR REPLACE INTO key_value_store (key, value) VALUES (?, ?)', key, JSON.stringify(dbData[key]));
+        }
     } catch (err) {
-        console.error('[DB] Gagal menyimpan database.json:', err.message);
+        console.error('[DB] Gagal menulis perubahan ke SQLite:', err.message);
     }
 }
 
 async function saveDatabaseAsync() {
-    try {
-        dbData.log_history = historyLog;
-        dbData.reminders = reminders;
-        dbData.group_configs = groupConfigs;
-        dbData.shop_data = shopData;
-        await fs.promises.writeFile(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
-    } catch (err) {
-        console.error('[DB] Gagal menyimpan database.json secara async:', err.message);
-    }
+    await saveDatabase();
 }
 
-// Redefinisikan fungsi-fungsi load & save agar kompatibel dengan kode lain tanpa banyak mengubah baris kode
+// Redefinisikan pembaca/penyimpan agar kompatibel dengan kode Express & WA lainnya
 function loadHistory() {
-    console.log('Database riwayat transaksi berhasil dimuat.');
+    console.log('Database riwayat transaksi SQLite siap.');
 }
 function saveHistory() {
     saveDatabase();
 }
 
 function loadReminders() {
-    console.log(`Berhasil memuat ${reminders.length} pengingat.`);
+    console.log(`Berhasil memuat ${reminders.length} pengingat dari SQLite.`);
 }
 function saveReminders() {
     saveDatabase();
 }
 
 function loadGroupConfigs() {
-    console.log('Database konfigurasi grup berhasil dimuat.');
+    console.log('Database konfigurasi grup SQLite siap.');
 }
 function saveGroupConfigs() {
     saveDatabase();
 }
 
 function loadShopData() {
-    console.log('Database data toko berhasil dimuat.');
+    console.log('Database data toko SQLite siap.');
 }
 function saveShopData() {
     saveDatabase();
@@ -301,12 +338,89 @@ function addHistoryLog(type, entry) {
 }
 
 // Setup Express Web Server & Socket.io
+// Setup Express Web Server & Socket.io
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 const PORT = config.port || 3000;
 
 app.use(express.json());
+
+// Global Session Token Store (In-Memory)
+const activeSessions = new Set();
+
+// Middleware Autentikasi Dasbor
+function checkAuth(req, res, next) {
+    // 1. Izinkan akses ke halaman login dan API login
+    const publicPaths = ['/login', '/api/login', '/favicon.ico'];
+    if (publicPaths.includes(req.path)) {
+        return next();
+    }
+
+    // 2. Ambil token sesi dari cookie
+    let token = null;
+    const cookies = req.headers.cookie;
+    if (cookies) {
+        const parts = cookies.split(';');
+        for (const part of parts) {
+            const [k, v] = part.trim().split('=');
+            if (k === 'session_token') {
+                token = v;
+                break;
+            }
+        }
+    }
+
+    // 3. Verifikasi keaktifan token
+    if (token && activeSessions.has(token)) {
+        return next();
+    }
+
+    // 4. Tolak akses jika tidak terautentikasi
+    if (req.path.startsWith('/api/')) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+    return res.redirect('/login');
+}
+
+// Rute Autentikasi
+app.use(checkAuth);
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+app.post('/api/login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        const token = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+        activeSessions.add(token);
+        res.cookie('session_token', token, { httpOnly: true, secure: false, maxAge: 24 * 60 * 60 * 1000 }); // 24 jam
+        return res.json({ success: true });
+    }
+    return res.status(401).json({ success: false, error: 'Username atau password salah!' });
+});
+
+app.post('/api/logout', (req, res) => {
+    const cookies = req.headers.cookie;
+    if (cookies) {
+        const parts = cookies.split(';');
+        for (const part of parts) {
+            const [k, v] = part.trim().split('=');
+            if (k === 'session_token') {
+                activeSessions.delete(v);
+                break;
+            }
+        }
+    }
+    res.clearCookie('session_token');
+    res.json({ success: true });
+});
+
+app.get('/api/auth-status', (req, res) => {
+    res.json({ authenticated: true });
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/knowledge', express.static(path.join(__dirname, 'knowledge')));
 app.use('/media', express.static(path.join(__dirname, 'media')));
@@ -2239,11 +2353,14 @@ function appendToMemory(text) {
 }
 
 // Inisialisasi Database
-loadHistory();
-loadSessions();
-loadReminders();
-loadGroupConfigs();
-loadShopData();
+(async () => {
+    await initDatabase();
+    loadHistory();
+    loadSessions();
+    loadReminders();
+    loadGroupConfigs();
+    loadShopData();
+})();
 
 // Socket.io Connection Logic
 io.on('connection', (socket) => {
