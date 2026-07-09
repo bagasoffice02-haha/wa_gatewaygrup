@@ -831,6 +831,73 @@
     </div>
 
     <!-- ══════════════════════════════════════════
+         TAB 6 — INVOICE MANAGER
+    ══════════════════════════════════════════ -->
+    <div id="tab-invoices" class="tab-content hidden">
+        <main class="dashboard-grid full-width-grid">
+            <!-- SUMMARY STATS -->
+            <section class="panel stats-section" style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <i data-lucide="file-text" style="color: var(--primary-color);"></i>
+                        <span>Total Invoice</span>
+                    </div>
+                    <div class="stat-card-value" id="invoice-stat-total">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <i data-lucide="clock" style="color: #ffd60a;"></i>
+                        <span>Sedang Diproses</span>
+                    </div>
+                    <div class="stat-card-value" id="invoice-stat-proses">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-header">
+                        <i data-lucide="check-circle-2" style="color: #30d158;"></i>
+                        <span>Pembayaran Selesai</span>
+                    </div>
+                    <div class="stat-card-value" id="invoice-stat-selesai">0</div>
+                </div>
+            </section>
+
+            <!-- INVOICES LOG PANEL -->
+            <section class="panel main-panel card list-card" style="grid-column: 1 / -1;">
+                <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+                    <div class="panel-title-area">
+                        <i data-lucide="receipt"></i>
+                        <h2>Riwayat Pencatatan Invoice</h2>
+                    </div>
+                    <div class="panel-actions" style="display: flex; gap: 8px;">
+                        <button class="btn btn-secondary invoice-filter-btn active" onclick="filterInvoices('ALL')" style="font-size: 0.8rem; padding: 6px 12px;">Semua</button>
+                        <button class="btn btn-secondary invoice-filter-btn" onclick="filterInvoices('PROSES')" style="font-size: 0.8rem; padding: 6px 12px; color: #ffd60a;">Diproses</button>
+                        <button class="btn btn-secondary invoice-filter-btn" onclick="filterInvoices('SELESAI')" style="font-size: 0.8rem; padding: 6px 12px; color: #30d158;">Selesai</button>
+                    </div>
+                </div>
+
+                <div class="table-responsive" style="margin-top: 16px;">
+                    <table class="ios-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 15%;">No Invoice</th>
+                                <th style="width: 20%;">Pelanggan</th>
+                                <th style="width: 35%;">Detail Percakapan / Transaksi</th>
+                                <th style="width: 15%;">Waktu Cetak</th>
+                                <th style="width: 10%;">Status</th>
+                                <th style="width: 15%; text-align: right;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="invoices-table-body">
+                            <tr>
+                                <td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary);">Memuat data invoice...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ══════════════════════════════════════════
          TAB 3 — SETTINGS
     ══════════════════════════════════════════ -->
     <div id="tab-settings" class="tab-content hidden">
@@ -1080,6 +1147,10 @@
         <button id="btn-tab-orders" class="ios-tab-btn" onclick="switchTab('orders')">
             <i data-lucide="shopping-bag"></i>
             <span>Pemesanan</span>
+        </button>
+        <button id="btn-tab-invoices" class="ios-tab-btn" onclick="switchTab('invoices')">
+            <i data-lucide="file-text"></i>
+            <span>Invoice</span>
         </button>
         <button id="btn-tab-settings" class="ios-tab-btn" onclick="switchTab('settings')">
             <i data-lucide="settings-2"></i>

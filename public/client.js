@@ -86,6 +86,7 @@ window.switchTab = function(tabId) {
     const tabGroups = document.getElementById('tab-groups');
     const tabShop = document.getElementById('tab-shop');
     const tabOrders = document.getElementById('tab-orders');
+    const tabInvoices = document.getElementById('tab-invoices');
     
     const btnMonitor = document.getElementById('btn-tab-monitor');
     const btnMemory = document.getElementById('btn-tab-memory');
@@ -93,6 +94,7 @@ window.switchTab = function(tabId) {
     const btnGroups = document.getElementById('btn-tab-groups');
     const btnShop = document.getElementById('btn-tab-shop');
     const btnOrders = document.getElementById('btn-tab-orders');
+    const btnInvoices = document.getElementById('btn-tab-invoices');
     
     // Hide all
     if (tabMonitor) tabMonitor.classList.add('hidden');
@@ -101,6 +103,7 @@ window.switchTab = function(tabId) {
     if (tabGroups) tabGroups.classList.add('hidden');
     if (tabShop) tabShop.classList.add('hidden');
     if (tabOrders) tabOrders.classList.add('hidden');
+    if (tabInvoices) tabInvoices.classList.add('hidden');
     
     if (btnMonitor) btnMonitor.classList.remove('active');
     if (btnMemory) btnMemory.classList.remove('active');
@@ -108,6 +111,7 @@ window.switchTab = function(tabId) {
     if (btnGroups) btnGroups.classList.remove('active');
     if (btnShop) btnShop.classList.remove('active');
     if (btnOrders) btnOrders.classList.remove('active');
+    if (btnInvoices) btnInvoices.classList.remove('active');
     
     if (tabId === 'monitor') {
         if (tabMonitor) tabMonitor.classList.remove('hidden');
@@ -131,6 +135,10 @@ window.switchTab = function(tabId) {
         if (tabOrders) tabOrders.classList.remove('hidden');
         if (btnOrders) btnOrders.classList.add('active');
         loadOrders();
+    } else if (tabId === 'invoices') {
+        if (tabInvoices) tabInvoices.classList.remove('hidden');
+        if (btnInvoices) btnInvoices.classList.add('active');
+        loadInvoices();
     }
 };// Real-time Socket.io Connection Events
 socket.on('connect', () => {
@@ -2729,6 +2737,175 @@ socket.on('order_created', (newOrder) => {
                 dot.id = 'order-badge-dot';
                 dot.style = 'position: absolute; top: 6px; right: 28px; width: 8px; height: 8px; background: #ff453a; border-radius: 50%;';
                 btnOrders.appendChild(dot);
+            }
+        }
+    }
+});
+
+// === INVOICES MANAGEMENT ===
+let allInvoices = [];
+let currentInvoiceFilter = 'ALL';
+
+window.loadInvoices = async function() {
+    try {
+        const res = await fetch('/api/invoices');
+        if (!res.ok) throw new Error('Gagal mengambil data invoice');
+        allInvoices = await res.json();
+        
+        const total = allInvoices.length;
+        const proses = allInvoices.filter(i => i.status === 'PROSES').length;
+        const selesai = allInvoices.filter(i => i.status === 'SELESAI').length;
+        
+        document.getElementById('invoice-stat-total').textContent = total;
+        document.getElementById('invoice-stat-proses').textContent = proses;
+        document.getElementById('invoice-stat-selesai').textContent = selesai;
+        
+        const dot = document.getElementById('invoice-badge-dot');
+        if (dot) dot.remove();
+        
+        renderInvoicesTable();
+    } catch (err) {
+        console.error('Error loadInvoices:', err);
+    }
+};
+
+window.filterInvoices = function(status) {
+    currentInvoiceFilter = status;
+    const buttons = document.querySelectorAll('.invoice-filter-btn');
+    buttons.forEach(btn => {
+        if (btn.getAttribute('onclick').includes(status)) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    renderInvoicesTable();
+};
+
+window.renderInvoicesTable = function() {
+    const tbody = document.getElementById('invoices-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    
+    const filtered = allInvoices.filter(i => {
+        if (currentInvoiceFilter === 'ALL') return true;
+        return i.status === currentInvoiceFilter;
+    });
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding: 30px; text-align: center; color: var(--text-secondary);">Tidak ada invoice dengan status "${currentInvoiceFilter}"</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    filtered.forEach(inv => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--border-color)';
+        
+        const dateFormatted = new Date(inv.created_at).toLocaleString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            day: '2-digit',
+            month: 'short'
+        });
+        
+        const statusBadge = inv.status === 'PROSES' 
+            ? `<span class="badge" style="background: rgba(255,214,10,0.15); color: #ffd60a; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Diproses</span>`
+            : `<span class="badge" style="background: rgba(48,209,88,0.15); color: #30d158; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem;">Selesai</span>`;
+                
+        tr.innerHTML = `
+            <td style="padding: 12px 16px; font-weight: 500; font-family: monospace;">#${inv.id}</td>
+            <td style="padding: 12px 16px;">
+                <div style="font-weight: 600;">${inv.customer_name}</div>
+                <div style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    <a href="https://wa.me/${inv.customer_number}" target="_blank" style="color: #30d158; font-size: 0.75rem; text-decoration: none; display: flex; align-items: center; gap: 2px;">
+                        <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> ${inv.customer_number}
+                    </a>
+                </div>
+            </td>
+            <td style="padding: 12px 16px; font-size: 0.9rem; white-space: pre-wrap;">${inv.details}</td>
+            <td style="padding: 12px 16px; font-size: 0.8rem; color: var(--text-secondary);">${dateFormatted}</td>
+            <td style="padding: 12px 16px;">${statusBadge}</td>
+            <td style="padding: 12px 16px; text-align: right;">
+                <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                    ${inv.status === 'PROSES' ? `
+                        <button class="btn btn-primary" onclick="updateInvoiceStatus('${inv.id}', 'SELESAI')" style="font-size: 0.75rem; padding: 4px 8px; background: #30d158; border-color: #30d158;">Selesai</button>
+                    ` : ''}
+                    <button class="btn btn-secondary" onclick="deleteInvoice('${inv.id}')" style="font-size: 0.75rem; padding: 4px 8px; color: #ff453a; border-color: rgba(255,69,58,0.2);">Hapus</button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+    
+    if (window.lucide) lucide.createIcons();
+};
+
+window.updateInvoiceStatus = async function(id, status) {
+    try {
+        const res = await fetch(`/api/invoices/${id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+        });
+        if (res.ok) {
+            loadInvoices();
+        } else {
+            alert('Gagal memperbarui status invoice');
+        }
+    } catch (err) {
+        console.error('Error updateInvoiceStatus:', err);
+    }
+};
+
+window.deleteInvoice = async function(id) {
+    if (!confirm('Hapus invoice ini dari riwayat?')) return;
+    try {
+        const res = await fetch(`/api/invoices/${id}`, {
+            method: 'DELETE'
+        });
+        if (res.ok) {
+            loadInvoices();
+        } else {
+            alert('Gagal menghapus invoice');
+        }
+    } catch (err) {
+        console.error('Error deleteInvoice:', err);
+    }
+};
+
+// WebSocket Invoice Listener
+socket.on('invoice_created', (newInv) => {
+    playNotificationSound();
+    
+    const toast = document.createElement('div');
+    toast.style = 'position: fixed; top: 20px; right: 20px; background: #ff9f0a; color: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 9999; display: flex; align-items: center; gap: 8px; font-weight: 500; font-size: 0.9rem; animation: slideIn 0.3s ease;';
+    toast.innerHTML = `<i data-lucide="file-text" style="width: 18px; height: 18px;"></i> <span>Invoice Baru Dicetak! #${newInv.id}</span>`;
+    document.body.appendChild(toast);
+    
+    if (window.lucide) lucide.createIcons();
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+
+    const activeTab = document.querySelector('.ios-tab-btn.active');
+    if (activeTab && activeTab.id === 'btn-tab-invoices') {
+        loadInvoices();
+    } else {
+        const btnInvoices = document.getElementById('btn-tab-invoices');
+        if (btnInvoices) {
+            btnInvoices.style.position = 'relative';
+            let dot = document.getElementById('invoice-badge-dot');
+            if (!dot) {
+                dot = document.createElement('span');
+                dot.id = 'invoice-badge-dot';
+                dot.style = 'position: absolute; top: 6px; right: 28px; width: 8px; height: 8px; background: #ff9f0a; border-radius: 50%;';
+                btnInvoices.appendChild(dot);
             }
         }
     }

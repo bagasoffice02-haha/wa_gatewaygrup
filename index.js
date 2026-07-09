@@ -101,6 +101,18 @@ async function initDatabase() {
         `);
         console.log('[DB] Tabel orders di SQLite siap.');
 
+        await db.exec(`
+            CREATE TABLE IF NOT EXISTS invoices (
+                id TEXT PRIMARY KEY,
+                customer_number TEXT,
+                customer_name TEXT,
+                status TEXT,
+                details TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('[DB] Tabel invoices di SQLite siap.');
+
         // Muat data dari SQLite
         const rows = await db.all('SELECT key, value FROM key_value_store');
         const store = {};
@@ -467,6 +479,43 @@ app.delete('/api/orders/:id', async (req, res) => {
     } catch (err) {
         console.error('Gagal menghapus order:', err.message);
         res.status(500).json({ error: 'Gagal menghapus pesanan' });
+    }
+});
+
+// Endpoint Invoices
+app.get('/api/invoices', async (req, res) => {
+    try {
+        if (!db) return res.json([]);
+        const rows = await db.all('SELECT * FROM invoices ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        console.error('Gagal mengambil invoices:', err.message);
+        res.status(500).json({ error: 'Gagal mengambil data invoice' });
+    }
+});
+
+app.post('/api/invoices/:id/status', async (req, res) => {
+    try {
+        if (!db) return res.status(500).json({ error: 'Database belum siap' });
+        const { id } = req.params;
+        const { status } = req.body;
+        await db.run('UPDATE invoices SET status = ? WHERE id = ?', status, id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Gagal update status invoice:', err.message);
+        res.status(500).json({ error: 'Gagal update status invoice' });
+    }
+});
+
+app.delete('/api/invoices/:id', async (req, res) => {
+    try {
+        if (!db) return res.status(500).json({ error: 'Database belum siap' });
+        const { id } = req.params;
+        await db.run('DELETE FROM invoices WHERE id = ?', id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Gagal menghapus invoice:', err.message);
+        res.status(500).json({ error: 'Gagal menghapus data invoice' });
     }
 });
 
@@ -3905,30 +3954,36 @@ async function handleIncomingMessage(msg) {
         // ================================================================
     }
 
-    if (!isGroup) {
-        // Chat pribadi diabaikan untuk obrolan umum (hanya memproses menu admin di atas)
+    // Dapatkan konfigurasi grup target untuk menu
+    const configGroupId = isGroup ? chatId : Object.keys(groupConfigs.group_configs || {})[0];
+    const cfg = configGroupId ? groupConfigs.group_configs[configGroupId] : null;
+    
+    // Jika tidak ada konfigurasi grup sama sekali, buat default minimal agar chat pribadi tetap ada respon menu
+    let activeCfg = cfg;
+    if (!activeCfg && !isGroup) {
+        activeCfg = {
+            groupName: "Default Shop",
+            enabled: true,
+            useAiFallback: true,
+            triggerPrefix: '',
+            allowedKnowledgeFiles: [],
+            categoryFooter: 'Silakan pilih menu dengan mengetik angkanya:',
+            contentFooter: 'Ketik *0* untuk kembali ke menu sebelumnya, atau *#* untuk kembali ke menu utama.',
+            menuTree: { id: "root", name: "Menu Utama", type: "category", text: "Silakan pilih salah satu opsi di bawah ini:", children: [] }
+        };
+    }
+
+    // Jika di grup dan tidak ada config, abaikan
+    if (isGroup && !activeCfg) {
         return;
-    } else {
-        // JIKA CHAT GRUP
-        const groupId = chatId;
-        const cfg = groupConfigs.group_configs[groupId];
-        const senderId = msg.author || msg.from;
-        const cleanBoss = config.boss_number ? (config.boss_number.replace(/\D/g, '') + '@c.us') : '';
+    }
 
-        // Tentukan apakah pengirim adalah Host Admin
-        const isSenderHostAdmin = (() => {
-            if (isSenderBoss) return true;
-            const sender = senderId.split('@')[0].replace(/\D/g, '') + '@c.us';
-            const senderLid = senderId.split('@')[0].replace(/\D/g, '') + '@lid';
-            return (shopData.host_admins || []).some(admin => {
-                const cleanAdmin = admin.replace(/\D/g, '');
-                return cleanAdmin === sender.split('@')[0] || cleanAdmin === senderLid.split('@')[0];
-            });
-        })();
+    const groupId = chatId; // Agar balasan dikirim kembali ke grup/chat pribadi pengirim
+    const cleanBoss = config.boss_number ? (config.boss_number.replace(/\D/g, '') + '@c.us') : '';
 
-        // Intersepsi perintah Host Admin (di Grup)
-        if (isSenderHostAdmin && (userMessage.startsWith('!') || userMessage.startsWith('.'))) {
-            const cmd = userMessage.toLowerCase().trim();
+    // Intersepsi perintah Host Admin (Hanya jika di Grup)
+    if (isGroup && isSenderHostAdmin && (userMessage.startsWith('!') || userMessage.startsWith('.'))) {
+        const cmd = userMessage.toLowerCase().trim();
             
             // .buka atau !toko buka
             if (cmd === '.buka' || cmd === '!toko buka') {
@@ -3980,15 +4035,41 @@ async function handleIncomingMessage(msg) {
                     try {
                         const quotedMsg = await msg.getQuotedMessage();
                         const customerId = quotedMsg.author || quotedMsg.from;
+                        const customerNumber = customerId.split('@')[0];
                         const contact = await client.getContactById(customerId);
                         const customerName = contact.pushname || contact.name || `Pelanggan`;
                         
                         const statusVal = cmd === '.proses' ? '🔴 PROSES' : '🟢 DONE';
+                        const statusKey = cmd === '.proses' ? 'PROSES' : 'SELESAI';
                         const invoiceId = 'INV-' + Date.now().toString().substring(6);
+                        
+                        const details = quotedMsg.body || (quotedMsg.hasMedia ? '[Bukti Gambar/Media]' : '') || 'Tidak ada detail';
+                        
+                        // Simpan ke SQLite jika db siap
+                        if (db) {
+                            await db.run(
+                                'INSERT OR REPLACE INTO invoices (id, customer_number, customer_name, status, details) VALUES (?, ?, ?, ?, ?)',
+                                invoiceId,
+                                customerNumber,
+                                customerName,
+                                statusKey,
+                                details
+                            );
+                            
+                            // Emit socket ke dashboard
+                            io.emit('invoice_created', {
+                                id: invoiceId,
+                                customer_number: customerNumber,
+                                customer_name: customerName,
+                                status: statusKey,
+                                details: details,
+                                created_at: new Date().toISOString()
+                            });
+                        }
                         
                         const invoiceText = `📄 *INVOICE PEMBAYARAN* 📄\n\n` +
                                             `*No Invoice:* ${invoiceId}\n` +
-                                            `*Nama Pelanggan:* ${customerName} (@${customerId.split('@')[0]})\n` +
+                                            `*Nama Pelanggan:* ${customerName} (@${customerNumber})\n` +
                                             `*Status:* *${statusVal}*\n` +
                                             `*Tanggal:* ${new Date().toLocaleDateString('id-ID')}\n\n` +
                                             `_Pesanan Anda sedang diproses oleh admin. Harap tunggu info selanjutnya._`;
@@ -4068,7 +4149,7 @@ async function handleIncomingMessage(msg) {
         }
         
         // Abaikan grup jika tidak terdaftar atau dinonaktifkan
-        if (!cfg || !cfg.enabled) {
+        if (isGroup && (!cfg || !cfg.enabled)) {
             return;
         }
 
@@ -4408,8 +4489,9 @@ async function handleIncomingMessage(msg) {
         }
         
         // AI Fallback khusus grup dinonaktifkan agar di grup hanya merespon list menu dan kata kunci
-        return;
-    }
+        if (isGroup) {
+            return;
+        }
 
     // --- MEKANISME PROCESSING LOCK (ANTI OVERLOAD RAM) ---
     if (activeLocks.has(chatId)) {
