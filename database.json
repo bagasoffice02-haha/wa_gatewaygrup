@@ -1,0 +1,202 @@
+{
+  "chat_sessions": {},
+  "log_history": {
+    "finance": [],
+    "agenda": []
+  },
+  "reminders": [],
+  "group_configs": {
+    "group_configs": {
+      "120363410978236670@g.us": {
+        "groupName": "120363410978236670@g.us",
+        "enabled": true,
+        "useAiFallback": false,
+        "triggerPrefix": "list",
+        "allowedKnowledgeFiles": [],
+        "categoryFooter": "Silakan pilih menu",
+        "contentFooter": "--------------------------------\n📞 Hubungi admin jika ada pertanyaan\n💵 ketik \"*bayar*\" untuk menampilkan _Qris_",
+        "menuTree": {
+          "id": "root",
+          "name": "`list`",
+          "type": "category",
+          "children": [
+            {
+              "id": "1783458212083",
+              "name": "Capcut",
+              "type": "content",
+              "media": "",
+              "text": "\n_*CAPCUT PRO*_\n*Private*\n\n`7 HARI`\n> Rp 9.000\n\n`1 BULAN`\n> ~Rp 45.000~ 40.000\n\n*Sharing*\n\n`1 bulan`\n\n> 20.000\n\n\n📝*Keterangan :*\n\n> Private max login 2 device.\n> Sharing max login 1 device.\n> Garansi 25 Hari, Ati2 Rawan Limit Login susah dibenerin. Garansi jika pro ilang saja. Bukan Limit login karena login beberapa device.",
+              "status": "Tersedia",
+              "isPromo": true
+            },
+            {
+              "id": "1783459382807",
+              "name": "Canva",
+              "type": "content",
+              "text": "CANVA PRO\n\n`*MEMBER*`\n\n`1 Bulan invite`\n> ~6.000~ *3000*\n\n`2 Bulan invite`\n> 10.000\n\n`1 Bulan owner`\n> 9.000\n\n* Member Garansi\n* Owner Garansi",
+              "media": "",
+              "status": "Tersedia",
+              "isPromo": true
+            },
+            {
+              "id": "1783468724967",
+              "name": "Spotify",
+              "type": "content",
+              "text": "FULL GARANSI\n\n`1 Bulan`\nRp ~27.000~ 24.000",
+              "media": "",
+              "status": "Tersedia",
+              "isPromo": true
+            },
+            {
+              "id": "1783468852243",
+              "name": "Youtube",
+              "type": "content",
+              "text": "YOUTUBE PREMIUM\n+ YouTube Musik\n\n_INVITE_\n`1 BULAN`\n> Rp 6.000\n\n`3 BULAN`\n> Rp 20.000\n\n*NOTE*\n ⎙  _Garansi backfree_\n ⎙  _Pake akun seller nambah 5k_",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783469076439",
+              "name": "VIU",
+              "type": "content",
+              "text": "VIU\n\nPrivate Anti Limit\n\n`6 Bulan` \n> 7.000\n\n`1 Tahun`\n> 8.000\n\n`Lifetime`\n> 10.000",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783469283412",
+              "name": "Apple music",
+              "type": "content",
+              "text": "Apple music\n\n🏷️ `Invite`\n1 Bulan ― Rp.6.000\n2 Bulan ― Rp. 10.000\n\n🏷️ `Head`\n1 Bulan ― Rp. 15.000\n\nNote!\n➥ Sharing 4 User / Pengguna",
+              "media": "",
+              "status": "Pre-order"
+            },
+            {
+              "id": "1783469346832",
+              "name": "BSTATION",
+              "type": "content",
+              "text": "B STATION \n\n 🏷️ `SHARE 5U`\n 1 Bulan : 10.000\n\n 🏷️ `PRIVATE`\n 1 Bulan : 25.000\n\n ⎙ 1 Tahun Garansi 6 Bulan \n ⎙ Support All Device \n ⎙ Akun Dari Admin",
+              "media": "",
+              "status": "Pre-order"
+            },
+            {
+              "id": "1783469568398",
+              "name": "Gemini",
+              "type": "content",
+              "text": "GEMINI AI PRO\n\n`INVITE`\n3 Bulan : Rp 25.000\n\n`LINK REDEEM`\n18 Bulan : Rp 50.000",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783469911171",
+              "name": "Bayar",
+              "type": "content",
+              "text": " ⎙  *Bukti pembayarannya kirim ke grup*",
+              "media": "Qris.jpeg",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783490687889",
+              "name": "Netflix",
+              "type": "content",
+              "text": "NETFLIX PREMIUM\n\n 🏷️ `SHARING 1P1U`\n 1 Minggu : 10.000\n 1 Bulan : 30.000  \n\n🏷️ `SEMI PRIVATE` \n 1 Bulan : 37.000\n\n🏷️ `NETFLIX PRIVATE`\n1 Bulan : 160.000\n\n ⎙ Fullakses kodemasuk Household\n ⎙ FullGaransi 25-30  \n ⎙ Max Garansi Error 6 Jam\n ⎙ Resolusi Ultra HD 4K\n ⎙ Plan Premium \n ⎙ Support All Device \n ⎙ Akun dari admin",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783511951031",
+              "name": "Chat GPT",
+              "type": "content",
+              "text": "*CHAT GPT 5.2*\n\n *PLAN PLUS SHARE*\n 1 Minggu :_Rp.17.000_\n 1 Bulan :_Rp.40.000_\n\n *PRIVATE*\n\n1 Bulan :_Rp. 230.000_\nplan plus\n\n> Full Garansi\n> Akun Seller\n\n \nNote:\n⎙ *PLAN GPT PLUS 5.2*\n> Plan Auto\n> Plan Instant\n> Plan Thinking",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783575665433",
+              "name": "Claude",
+              "type": "content",
+              "text": "*Claude AI paket pro*\n\n`7hari`\n110.000\n\n`1bulan` \n280.000\n\nKeterangan:\n> Full garansi\n> Private akun",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "prod_1783577288620",
+              "name": "Zoom",
+              "type": "content",
+              "text": "*ZOOM*\n\n`7 Hari`\n6.000\n\n`14 Hari`\n10.000\n\n `1 Bulan`\n15.000\n\nKeterangan:\n> Support All Device\n> Akun Dari Admin",
+              "status": "Pre-order",
+              "isPromo": false,
+              "media": ""
+            },
+            {
+              "id": "1783578035268",
+              "name": "Alight Motion",
+              "type": "content",
+              "text": "*ALIGHT MOTION PRO * \n\n 🏷 *ALIGHT MOTION FULLGARANSI*\n_1 Tahun : 10.000_\n\n🏷 *ALIGHT MOTION GARANSI 6 BULAN*\n_1 Tahun : 7.000_\n\n> 1Tahun Garansi 6 Bulan \n> Support All Device \n> Akun Dari Admin\n> Tanya stok sebelum order",
+              "media": "",
+              "status": "Pre-order"
+            },
+            {
+              "id": "1783578244885",
+              "name": "GROK AI",
+              "type": "content",
+              "text": " 🏷️ *SUPERGROK AI*\n\nPRIVATE\n _1 Bulan hari : 100.000_\n\nSHARING \n _1 Bulan : 35.000_\n\n> _Full Garansi Selama Durasi Pembelian_ \n> _Support All Device_ \n> _Akun Dari Admin_",
+              "media": "",
+              "status": "Pre-order"
+            },
+            {
+              "id": "1783594053324",
+              "name": "Vidio",
+              "type": "content",
+              "text": "*VIDIO ONLY MOBILE*\n1 Bulan Sharing Rp 14.000\n1 Bulan Private Rp 23.000\n\n*VIDIO ONLY TV*\n1 Tahun : Rp. 15.000\n`garansi 1bulan`\n\nNote :\n_*DISARANKAN JIKA INGIN MENONTON BOLA BELI PRIVATE*_\n> _*SHARING 2 DEVICE UNTUK MOBILE ONLY*_\n> _*SHARING 3 DEVICE UNTUK ALLDEVICE*_\n> _*BERGARANSI TIDAK BERGARANSI, JIKA AKUN TERBEN/TERHAPUS*_\n> _*AKUN PRIVATE DISEDIAKAN SELLER*_\n> _*PRIVATE BISA UBAH PASSWORD*_",
+              "media": "",
+              "status": "Tersedia"
+            },
+            {
+              "id": "1783594501781",
+              "name": "Lok lok",
+              "type": "content",
+              "text": "*LOKLOK*\n\nBASIC\n1 BULAN Rp 19,000\n\nSTANDAR \n1 BULAN Rp 22,000\n\n*Note*\n> Akun sharing \n> Basic gabisa di tv\n> Standar bisa di tv",
+              "media": "",
+              "status": "Pre-order"
+            }
+          ],
+          "text": "",
+          "isPromo": false
+        },
+        "categoryEmoji": "📁",
+        "contentEmoji": "📄",
+        "enableNumberNavigation": false,
+        "universalHeader": "Halo, @user\nSELAMAT DATANG DI  _JAJAN DIGITAL_\n_______________________________",
+        "universalFooter": "_______________________\n✅ = Tersedia | ❌ = Habis \n⏳ = Pre-Order | 🔥 = Promo\n\n📦 Cara Order: Ketik nama/nomor produk → konfirmasi ke admin → kirim bukti bayar di grup",
+        "welcomeMessage": "Halo @user, selamat datang di toko kami, ketik _list_ untuk melihat produk kami.",
+        "autoCloseSchedule": {
+          "enabled": true,
+          "openTime": "08:00",
+          "closeTime": "22:00",
+          "activeDays": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ]
+        },
+        "extraTriggers": [
+          {
+            "keyword": "Jadwal",
+            "reply": "Toko akan buka di jam operasional (08.00-22.00)😊"
+          }
+        ]
+      }
+    }
+  },
+  "shop_data": {
+    "host_admins": [
+      "32449065132068@c.us"
+    ],
+    "customers": []
+  }
+}

@@ -18,11 +18,8 @@ const { exec } = require('child_process');
 
 // Definisikan File Penyimpanan Data Persisten
 const CONFIG_FILE = './config.json';
-const SESSION_DB_FILE = './chat_sessions.json';
-const HISTORY_LOG_FILE = './log_history.json';
-const REMINDERS_FILE = './reminders.json';
-const GROUP_CONFIGS_FILE = './group_configs.json';
-const SHOP_DATA_FILE = './shop_data.json';
+const DATABASE_FILE = './database.json';
+const SESSION_DB_FILE = './chat_sessions.json'; // kept for some legacy checks if any
 
 // Pastikan file config ada sebelum memulai aplikasi
 if (!fs.existsSync(CONFIG_FILE)) {
@@ -41,112 +38,130 @@ if (apiEndpoint && !apiEndpoint.includes('/chat/completions') && !apiEndpoint.in
 // State Management
 let historyLog = { finance: [], agenda: [] };
 let sheetsSummaryCache = { data: null, timestamp: 0 };
-
-// Load History Log dari file JSON saat startup
-function loadHistory() {
-    try {
-        if (fs.existsSync(HISTORY_LOG_FILE)) {
-            const data = fs.readFileSync(HISTORY_LOG_FILE, 'utf-8');
-            historyLog = JSON.parse(data);
-            console.log('Database riwayat transaksi berhasil dimuat.');
-        } else {
-            historyLog = { finance: [], agenda: [] };
-            fs.writeFileSync(HISTORY_LOG_FILE, JSON.stringify(historyLog, null, 2), 'utf-8');
-            console.log('Database riwayat transaksi baru diinisialisasi.');
-        }
-    } catch (err) {
-        console.error('Gagal membaca database riwayat transaksi:', err.message);
-        historyLog = { finance: [], agenda: [] };
-    }
-}
-
-function saveHistory() {
-    try {
-        fs.writeFileSync(HISTORY_LOG_FILE, JSON.stringify(historyLog, null, 2), 'utf-8');
-    } catch (err) {
-        console.error('Gagal menyimpan database riwayat transaksi:', err.message);
-    }
-}
-
-// System Pengingat (Reminder) Setup
 let reminders = [];
-
-function loadReminders() {
-    try {
-        if (fs.existsSync(REMINDERS_FILE)) {
-            reminders = JSON.parse(fs.readFileSync(REMINDERS_FILE, 'utf-8'));
-            console.log(`Berhasil memuat ${reminders.length} pengingat.`);
-        } else {
-            reminders = [];
-            fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2), 'utf-8');
-            console.log('Database pengingat baru diinisialisasi.');
-        }
-    } catch (err) {
-        console.error('Gagal memuat berkas pengingat:', err.message);
-        reminders = [];
-    }
-}
-
-function saveReminders() {
-    try {
-        fs.writeFileSync(REMINDERS_FILE, JSON.stringify(reminders, null, 2), 'utf-8');
-    } catch (err) {
-        console.error('Gagal menyimpan berkas pengingat:', err.message);
-    }
-}
-
-// Group Configurations Database
 let groupConfigs = { group_configs: {} };
-
-function loadGroupConfigs() {
-    try {
-        if (fs.existsSync(GROUP_CONFIGS_FILE)) {
-            groupConfigs = JSON.parse(fs.readFileSync(GROUP_CONFIGS_FILE, 'utf-8'));
-            console.log('Database konfigurasi grup berhasil dimuat.');
-        } else {
-            groupConfigs = { group_configs: {} };
-            fs.writeFileSync(GROUP_CONFIGS_FILE, JSON.stringify(groupConfigs, null, 2), 'utf-8');
-            console.log('Database konfigurasi grup baru diinisialisasi.');
-        }
-    } catch (err) {
-        console.error('Gagal memuat database konfigurasi grup:', err.message);
-        groupConfigs = { group_configs: {} };
-    }
-}
-
-function saveGroupConfigs() {
-    try {
-        fs.writeFileSync(GROUP_CONFIGS_FILE, JSON.stringify(groupConfigs, null, 2), 'utf-8');
-    } catch (err) {
-        console.error('Gagal menyimpan database konfigurasi grup:', err.message);
-    }
-}
-
-// Shop Data Database (Host Admins, Customers)
 let shopData = { host_admins: [], customers: [] };
 
-function loadShopData() {
+// Central Database Object
+let dbData = {
+    chat_sessions: {},
+    log_history: { finance: [], agenda: [] },
+    reminders: [],
+    group_configs: { group_configs: {} },
+    shop_data: { host_admins: [], customers: [] }
+};
+
+// Fungsi Inisialisasi Database Terpusat dengan Migrasi Data Otomatis
+function initDatabase() {
     try {
-        if (fs.existsSync(SHOP_DATA_FILE)) {
-            shopData = JSON.parse(fs.readFileSync(SHOP_DATA_FILE, 'utf-8'));
-            console.log('Database data toko berhasil dimuat.');
+        if (fs.existsSync(DATABASE_FILE)) {
+            const raw = fs.readFileSync(DATABASE_FILE, 'utf-8');
+            dbData = JSON.parse(raw);
+            console.log('[DB] Database terpusat database.json berhasil dimuat.');
+            
+            // Map ke variabel cache memory aplikasi
+            if (dbData.log_history) historyLog = dbData.log_history;
+            if (dbData.reminders) reminders = dbData.reminders;
+            if (dbData.group_configs) groupConfigs = dbData.group_configs;
+            if (dbData.shop_data) shopData = dbData.shop_data;
         } else {
-            shopData = { host_admins: [], customers: [] };
-            fs.writeFileSync(SHOP_DATA_FILE, JSON.stringify(shopData, null, 2), 'utf-8');
-            console.log('Database data toko baru diinisialisasi.');
+            console.log('[DB] database.json tidak ditemukan. Memulai proses migrasi data lama...');
+            
+            // Migrasikan file individual jika masih ada
+            if (fs.existsSync('./chat_sessions.json')) {
+                try { dbData.chat_sessions = JSON.parse(fs.readFileSync('./chat_sessions.json', 'utf-8')); } catch(e) {}
+            }
+            if (fs.existsSync('./log_history.json')) {
+                try { dbData.log_history = JSON.parse(fs.readFileSync('./log_history.json', 'utf-8')); } catch(e) {}
+            }
+            if (fs.existsSync('./reminders.json')) {
+                try { dbData.reminders = JSON.parse(fs.readFileSync('./reminders.json', 'utf-8')); } catch(e) {}
+            }
+            if (fs.existsSync('./group_configs.json')) {
+                try { dbData.group_configs = JSON.parse(fs.readFileSync('./group_configs.json', 'utf-8')); } catch(e) {}
+            }
+            if (fs.existsSync('./shop_data.json')) {
+                try { dbData.shop_data = JSON.parse(fs.readFileSync('./shop_data.json', 'utf-8')); } catch(e) {}
+            }
+            
+            // Simpan sebagai database terpusat yang baru
+            fs.writeFileSync(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+            console.log('[DB] database.json berhasil dibuat dan data lama dimigrasikan.');
+            
+            // Map ke variabel cache memory aplikasi
+            historyLog = dbData.log_history || historyLog;
+            reminders = dbData.reminders || reminders;
+            groupConfigs = dbData.group_configs || groupConfigs;
+            shopData = dbData.shop_data || shopData;
+            
+            // Ubah nama file lama menjadi .bak agar aman dan tidak hilang
+            const oldFiles = ['./chat_sessions.json', './log_history.json', './reminders.json', './group_configs.json', './shop_data.json'];
+            for (const file of oldFiles) {
+                if (fs.existsSync(file)) {
+                    try { fs.renameSync(file, file + '.bak'); } catch(e) {}
+                }
+            }
         }
     } catch (err) {
-        console.error('Gagal memuat database data toko:', err.message);
-        shopData = { host_admins: [], customers: [] };
+        console.error('[DB] Gagal menginisialisasi database terpusat:', err.message);
     }
 }
 
-function saveShopData() {
+// Jalankan inisialisasi di awal script untuk menjamin ketersediaan dbData
+initDatabase();
+
+// Fungsi Helper untuk Menyimpan Seluruh Data ke database.json
+function saveDatabase() {
     try {
-        fs.writeFileSync(SHOP_DATA_FILE, JSON.stringify(shopData, null, 2), 'utf-8');
+        dbData.log_history = historyLog;
+        dbData.reminders = reminders;
+        dbData.group_configs = groupConfigs;
+        dbData.shop_data = shopData;
+        fs.writeFileSync(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
     } catch (err) {
-        console.error('Gagal menyimpan database data toko:', err.message);
+        console.error('[DB] Gagal menyimpan database.json:', err.message);
     }
+}
+
+async function saveDatabaseAsync() {
+    try {
+        dbData.log_history = historyLog;
+        dbData.reminders = reminders;
+        dbData.group_configs = groupConfigs;
+        dbData.shop_data = shopData;
+        await fs.promises.writeFile(DATABASE_FILE, JSON.stringify(dbData, null, 2), 'utf-8');
+    } catch (err) {
+        console.error('[DB] Gagal menyimpan database.json secara async:', err.message);
+    }
+}
+
+// Redefinisikan fungsi-fungsi load & save agar kompatibel dengan kode lain tanpa banyak mengubah baris kode
+function loadHistory() {
+    console.log('Database riwayat transaksi berhasil dimuat.');
+}
+function saveHistory() {
+    saveDatabase();
+}
+
+function loadReminders() {
+    console.log(`Berhasil memuat ${reminders.length} pengingat.`);
+}
+function saveReminders() {
+    saveDatabase();
+}
+
+function loadGroupConfigs() {
+    console.log('Database konfigurasi grup berhasil dimuat.');
+}
+function saveGroupConfigs() {
+    saveDatabase();
+}
+
+function loadShopData() {
+    console.log('Database data toko berhasil dimuat.');
+}
+function saveShopData() {
+    saveDatabase();
 }
 
 global.pinnedHostAdmins = [];
@@ -1170,26 +1185,15 @@ let currentQrCode = null;
 
 // Load Database Sesi Persisten dari file JSON saat startup
 function loadSessions() {
-    try {
-        if (fs.existsSync(SESSION_DB_FILE)) {
-            const data = fs.readFileSync(SESSION_DB_FILE, 'utf-8');
-            chatSessions = JSON.parse(data);
-            console.log('Database riwayat percakapan berhasil dimuat.');
-        } else {
-            chatSessions = {};
-            fs.writeFileSync(SESSION_DB_FILE, JSON.stringify(chatSessions, null, 2));
-            console.log('Database riwayat percakapan baru diinisialisasi.');
-        }
-    } catch (err) {
-        console.error('Gagal membaca database riwayat percakapan:', err.message);
-        chatSessions = {};
-    }
+    chatSessions = dbData.chat_sessions || {};
+    console.log('Database riwayat percakapan berhasil dimuat.');
 }
 
 // Menyimpan Database Sesi ke File JSON (Asinkronus)
 async function saveSessions() {
     try {
-        await fs.promises.writeFile(SESSION_DB_FILE, JSON.stringify(chatSessions, null, 2), 'utf-8');
+        dbData.chat_sessions = chatSessions;
+        await saveDatabaseAsync();
     } catch (err) {
         console.error('Gagal menyimpan database riwayat ke file:', err.message);
     }

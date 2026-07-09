@@ -9,3 +9,5 @@ reminders.json
 scratch/
 .env
 *.log
+*.bak
+
