@@ -129,7 +129,7 @@ window.switchTab = function(tabId) {
         loadCustomersList();
     } else if (tabId === 'transactions') {
         if (tabTransactions) tabTransactions.classList.remove('hidden');
-        if (btnTransactions) btnTransactions.add('active');
+        if (btnTransactions) btnTransactions.classList.add('active');
         loadOrders();
         loadInvoices();
     }
