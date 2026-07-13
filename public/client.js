@@ -86,6 +86,7 @@ window.switchTab = function(tabId) {
     const tabGroups = document.getElementById('tab-groups');
     const tabShop = document.getElementById('tab-shop');
     const tabTransactions = document.getElementById('tab-transactions');
+    const tabFeatures = document.getElementById('tab-features');
     
     const btnMonitor = document.getElementById('btn-tab-monitor');
     const btnMemory = document.getElementById('btn-tab-memory');
@@ -93,6 +94,7 @@ window.switchTab = function(tabId) {
     const btnGroups = document.getElementById('btn-tab-groups');
     const btnShop = document.getElementById('btn-tab-shop');
     const btnTransactions = document.getElementById('btn-tab-transactions');
+    const btnFeatures = document.getElementById('btn-tab-features');
     
     // Hide all
     if (tabMonitor) tabMonitor.classList.add('hidden');
@@ -101,6 +103,7 @@ window.switchTab = function(tabId) {
     if (tabGroups) tabGroups.classList.add('hidden');
     if (tabShop) tabShop.classList.add('hidden');
     if (tabTransactions) tabTransactions.classList.add('hidden');
+    if (tabFeatures) tabFeatures.classList.add('hidden');
     
     if (btnMonitor) btnMonitor.classList.remove('active');
     if (btnMemory) btnMemory.classList.remove('active');
@@ -108,6 +111,7 @@ window.switchTab = function(tabId) {
     if (btnGroups) btnGroups.classList.remove('active');
     if (btnShop) btnShop.classList.remove('active');
     if (btnTransactions) btnTransactions.classList.remove('active');
+    if (btnFeatures) btnFeatures.classList.remove('active');
     
     if (tabId === 'monitor') {
         if (tabMonitor) tabMonitor.classList.remove('hidden');
@@ -132,6 +136,9 @@ window.switchTab = function(tabId) {
         if (btnTransactions) btnTransactions.classList.add('active');
         loadOrders();
         loadInvoices();
+    } else if (tabId === 'features') {
+        if (tabFeatures) tabFeatures.classList.remove('hidden');
+        if (btnFeatures) btnFeatures.classList.add('active');
     }
 };// Real-time Socket.io Connection Events
 socket.on('connect', () => {

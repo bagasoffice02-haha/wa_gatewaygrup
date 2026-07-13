@@ -905,6 +905,96 @@
     </div>
 
     <!-- ══════════════════════════════════════════
+         TAB 6 — FITUR BOT (HELP & GUIDE)
+    ══════════════════════════════════════════ -->
+    <div id="tab-features" class="tab-content hidden">
+        <main class="dashboard-grid" style="padding: 20px;">
+            <section class="panel card" style="grid-column: 1 / -1; background: var(--card-bg); border-radius: 12px; padding: 25px; border: 1px solid var(--border-color);">
+                <h2 style="display: flex; align-items: center; gap: 10px; font-size: 1.5rem; color: var(--text-color); margin-bottom: 5px;"><i data-lucide="help-circle" style="color: var(--primary-color);"></i> Panduan Fitur Bot WhatsApp</h2>
+                <p class="card-subtitle" style="color: var(--text-color-muted); font-size: 0.95rem; margin-bottom: 25px;">Semua daftar perintah dan fitur tersembunyi yang siap Anda gunakan untuk mengelola grup dan pesanan.</p>
+
+                <div class="features-guide-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                    <!-- Card 1: Invoice Pembayaran -->
+                    <div class="feature-card" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
+                        <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+                            <i data-lucide="receipt"></i> Pencetakan Invoice (.done / .proses)
+                        </h3>
+                        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-color-muted); margin: 0;">
+                            Gunakan untuk membuat invoice instan bagi pelanggan setelah mereka mengirimkan bukti pembayaran.
+                        </p>
+                        <ul style="padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-color); margin: 0;">
+                            <li><strong>Cara menggunakan:</strong> Balas / *quote* pesan bukti transfer/pembayaran dari pelanggan, lalu ketik <code>.done</code> atau <code>.proses</code>.</li>
+                            <li><strong>Syarat Pengguna:</strong> Hanya bisa digunakan oleh **Host Admin** atau **Admin Grup** (apabila di grup).</li>
+                            <li><strong>Hasil:</strong> Bot akan membalas dengan invoice detail berisi Nama, No Invoice, Status, Tanggal, dan Waktu (WIB), lalu datanya tercatat otomatis di tab <em>Transaksi</em>.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 2: Manajemen Akun & Password -->
+                    <div class="feature-card" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
+                        <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+                            <i data-lucide="key-round"></i> Manajemen Akun & Password
+                        </h3>
+                        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-color-muted); margin: 0;">
+                            Gunakan untuk mencatat akun premium (Netflix, Canva, Spotify, dll) langsung lewat chat, aman dari pelanggan!
+                        </p>
+                        <ul style="padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-color); margin: 0;">
+                            <li><strong>Melihat & Mencari Akun:</strong> Ketik <code>.akun</code> untuk melihat semua, atau <code>.akun [kata kunci]</code> untuk cari (contoh: <code>.akun netflix</code>).</li>
+                            <li><strong>Menambah Akun:</strong> Ketik <code>.tambahakun NamaApp | Email/User | Password | Ket</code></li>
+                            <li><strong>Menghapus Akun:</strong> Ketik <code>.hapusakun [kata kunci]</code></li>
+                            <li><strong>Keamanan:</strong> File ini disembunyikan otomatis dari AI Customer Service dan tidak akan bisa diakses pelanggan.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 3: Pemicu Pembayaran QRIS -->
+                    <div class="feature-card" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
+                        <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+                            <i data-lucide="qr-code"></i> Pemicu QRIS Pembayaran
+                        </h3>
+                        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-color-muted); margin: 0;">
+                            Memudahkan pelanggan mendapatkan barcode pembayaran toko secara instan.
+                        </p>
+                        <ul style="padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-color); margin: 0;">
+                            <li><strong>Kata Kunci Pemicu:</strong> Pelanggan mengetik <code>bayar</code>, <code>qris</code>, <code>pembayaran</code>, atau <code>cara bayar</code>.</li>
+                            <li><strong>Aksi Bot:</strong> Mengirimkan barcode QRIS dari file <code>media/Qris.jpeg</code> beserta panduan pengiriman bukti pembayaran ke dalam obrolan.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Card 4: Pengaturan Akses & Fitur Grup -->
+                    <div class="feature-card" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px;">
+                        <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+                            <i data-lucide="settings"></i> Perintah Kontrol Grup (Khusus Grup)
+                        </h3>
+                        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-color-muted); margin: 0;">
+                            Gunakan perintah instan berikut langsung di grup WhatsApp untuk mengontrol akses obrolan.
+                        </p>
+                        <ul style="padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-color); margin: 0;">
+                            <li><strong>Buka Toko:</strong> Ketik <code>.buka</code> atau <code>!toko buka</code> untuk mengizinkan semua anggota grup mengirim pesan.</li>
+                            <li><strong>Tutup Toko:</strong> Ketik <code>.tutup</code> atau <code>!toko tutup</code> agar hanya admin yang dapat mengirim pesan.</li>
+                            <li><strong>Mengeluarkan Anggota:</strong> Balas pesan anggota dengan mengetik <code>.kick</code>.</li>
+                            <li><strong>Promote & Demote Admin:</strong> Balas pesan anggota dengan <code>.promote</code> atau <code>.demote</code>.</li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Card 5: Cara Menjadi Host Admin -->
+                    <div class="feature-card" style="background: rgba(255, 255, 255, 0.02); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px;">
+                        <h3 style="color: var(--primary-color); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; margin: 0;">
+                            <i data-lucide="shield-alert"></i> Cara Mendaftarkan Host Admin Baru (Penting!)
+                        </h3>
+                        <p style="font-size: 0.9rem; line-height: 1.5; color: var(--text-color-muted); margin: 0;">
+                            Agar admin toko Anda dapat memproses perintah-perintah di atas di luar grup WhatsApp atau di chat pribadi (PC), daftarkan nomor telepon mereka sebagai **Host Admin**.
+                        </p>
+                        <ul style="padding-left: 20px; font-size: 0.85rem; line-height: 1.6; color: var(--text-color); margin: 0;">
+                            <li><strong>Langkah 1:</strong> Buka tab <strong>Toko</strong> di dashboard ini.</li>
+                            <li><strong>Langkah 2:</strong> Lihat kolom **Host Admin Terdaftar**, lalu masukkan nomor WhatsApp admin dengan format nomor lengkap (misal: <code>628123456789</code>) di form tambah admin.</li>
+                            <li><strong>Langkah 3:</strong> Klik Simpan/Tambah. Admin tersebut kini secara instan memiliki otoritas penuh untuk menggunakan semua perintah bot di WhatsApp.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- ══════════════════════════════════════════
          TAB 3 — SETTINGS
     ══════════════════════════════════════════ -->
     <div id="tab-settings" class="tab-content hidden">
@@ -1274,6 +1364,10 @@
         <button id="btn-tab-transactions" class="ios-tab-btn" onclick="switchTab('transactions')">
             <i data-lucide="receipt"></i>
             <span>Transaksi</span>
+        </button>
+        <button id="btn-tab-features" class="ios-tab-btn" onclick="switchTab('features')">
+            <i data-lucide="help-circle"></i>
+            <span>Fitur Bot</span>
         </button>
         <button id="btn-tab-settings" class="ios-tab-btn" onclick="switchTab('settings')">
             <i data-lucide="settings-2"></i>
